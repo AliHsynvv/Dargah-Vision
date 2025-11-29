@@ -3,7 +3,7 @@
 import Header from '@/components/Header'
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Image as ImageIcon, Sparkles, ArrowRight, Upload, X, CheckCircle, Download, ZoomIn, Layers } from 'lucide-react'
+import { Image as ImageIcon, Sparkles, ArrowRight, Upload, X, CheckCircle, Download, ZoomIn, Layers, MessageSquare, Wand2, ChevronDown } from 'lucide-react'
 import { uploadToSupabase } from '@/lib/supabase'
 
 const API_URL = '/api/design-from-reference'
@@ -30,6 +30,8 @@ export default function DesignRoomReferencePage() {
   const [error, setError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [userPrompt, setUserPrompt] = useState('')
+  const [promptExpanded, setPromptExpanded] = useState(false)
 
   const handleImageSelect = useCallback(async (
     file: File,
@@ -114,6 +116,7 @@ export default function DesignRoomReferencePage() {
         body: JSON.stringify({
           roomImageUrl: room.uploadedUrl,
           referenceImageUrl: reference.uploadedUrl,
+          userPrompt: userPrompt.trim() || undefined,
         }),
       })
 
@@ -376,6 +379,118 @@ export default function DesignRoomReferencePage() {
               </div>
             </motion.div>
           </div>
+
+          {/* Prompt Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55 }}
+            className="mt-8 max-w-4xl mx-auto"
+          >
+            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl lg:rounded-3xl p-5 sm:p-6 relative overflow-hidden">
+              {/* Gradient accent */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/50 to-transparent" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 rounded-xl flex items-center justify-center">
+                    <MessageSquare className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-white flex items-center gap-2">
+                      Design Instructions
+                      <span className="text-[10px] px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded-full font-medium">
+                        Optional
+                      </span>
+                    </h2>
+                    <p className="text-xs text-white/40">Describe your specific design preferences</p>
+                  </div>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setPromptExpanded(!promptExpanded)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/60 transition-colors"
+                >
+                  <motion.div
+                    animate={{ rotate: promptExpanded ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </motion.div>
+                  {promptExpanded ? 'Collapse' : 'Expand'}
+                </motion.button>
+              </div>
+
+              <AnimatePresence>
+                {promptExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="relative">
+                      <textarea
+                        value={userPrompt}
+                        onChange={(e) => setUserPrompt(e.target.value)}
+                        placeholder="Describe how you want your room to look... (e.g., 'Add warm lighting, use oak wood furniture, keep the colors neutral with green plants as accent')"
+                        className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+                      />
+                      <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                        <span className="text-[10px] text-white/30">{userPrompt.length}/500</span>
+                      </div>
+                    </div>
+
+                    {/* Quick Prompts */}
+                    <div className="mt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Wand2 className="w-3.5 h-3.5 text-white/40" />
+                        <span className="text-xs text-white/40">Quick suggestions</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          'Modern & minimalist',
+                          'Warm & cozy with wood',
+                          'Scandinavian style',
+                          'Industrial loft',
+                          'Luxury & elegant',
+                          'Natural & organic',
+                          'Bold colors',
+                          'Soft lighting',
+                        ].map((suggestion) => (
+                          <motion.button
+                            key={suggestion}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setUserPrompt(prev => prev ? `${prev}, ${suggestion.toLowerCase()}` : suggestion)}
+                            className="px-3 py-1.5 bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30 rounded-lg text-xs text-white/60 hover:text-violet-300 transition-all"
+                          >
+                            {suggestion}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Collapsed preview */}
+              {!promptExpanded && userPrompt && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-2 px-3 py-2 bg-violet-500/10 border border-violet-500/20 rounded-lg"
+                >
+                  <p className="text-xs text-violet-300 line-clamp-1">
+                    <span className="text-violet-400/60">Your prompt: </span>
+                    {userPrompt}
+                  </p>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
 
           {/* Generate Button */}
           <motion.div

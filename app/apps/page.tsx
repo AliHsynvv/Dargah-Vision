@@ -9,6 +9,15 @@ import { useState } from 'react'
 
 const apps = [
   {
+    tag: 'Planlaşdırma',
+    title: '2D Plan Yaradıcı',
+    description:
+      'Ölçüləri daxil edin, otaq tipini seçin və AI sizin üçün professional 2D plan yaratsın.',
+    href: '/apps/2d-plan-creator',
+    imageSrc: '/photos/furniture plan.png',
+    type: 'single',
+  },
+  {
     tag: 'Memarlıq',
     title: '2D-dən 3D-yə Çevirmə',
     description:

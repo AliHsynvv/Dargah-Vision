@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-const GEMINI_API_KEY = 'AIzaSyCNBLKPa3m2IIgVlBoedDj8wI6xDUjMkQA'
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 // Nano Banana Pro - Gemini 3 Pro Image Preview (best quality for image generation)
 const GEMINI_MODEL = 'gemini-3-pro-image-preview'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`

@@ -1,16 +1,54 @@
 import { NextRequest } from 'next/server'
 
-const GEMINI_API_KEY = 'AIzaSyCNBLKPa3m2IIgVlBoedDj8wI6xDUjMkQA'
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 // Nano Banana Pro - Gemini 3 Pro Image Preview (best quality for image generation)
 const GEMINI_MODEL = 'gemini-3-pro-image-preview'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 export const runtime = 'edge'
 
+// Professional prompt wrapper for interior design
+function wrapPromptProfessionally(userPrompt?: string): string {
+  const basePrompt = `You are a world-class interior designer and 3D visualization artist with expertise in photorealistic rendering. You have been trained in:
+- Architectural visualization and photorealistic rendering
+- Color theory and spatial harmony
+- Material textures and lighting design
+- Modern and classic interior design principles
+
+I'm providing two images:
+1. First image: This is the room I want to redesign (the target space)
+2. Second image: This is a reference room showing the style, mood, and aesthetic I want to achieve
+
+YOUR TASK:
+Generate a stunning, photorealistic interior design visualization that transforms the first room to match the style of the reference image.
+
+IMPORTANT GUIDELINES:
+- PRESERVE the basic architectural layout, room dimensions, windows, and doors from the first image
+- TRANSFER the design elements from the reference: furniture style, color palette, lighting mood, textures, materials, and decorative elements
+- Ensure the generated image is PHOTOREALISTIC with proper lighting, shadows, and reflections
+- Maintain spatial coherence and realistic proportions
+- Apply professional interior design principles for visual harmony`
+
+  if (userPrompt && userPrompt.trim()) {
+    return `${basePrompt}
+
+USER'S SPECIFIC DESIGN PREFERENCES:
+"${userPrompt.trim()}"
+
+Please incorporate the user's specific requests while maintaining the overall style transfer from the reference image. Prioritize their preferences when making design decisions.
+
+Generate a single, high-quality photorealistic image of the redesigned room.`
+  }
+
+  return `${basePrompt}
+
+Generate a single, high-quality photorealistic image of the redesigned room that perfectly blends the original space with the reference style.`
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { roomImageUrl, referenceImageUrl } = body
+    const { roomImageUrl, referenceImageUrl, userPrompt } = body
 
     if (!roomImageUrl || typeof roomImageUrl !== 'string') {
       return new Response(JSON.stringify({ error: 'No room image URL provided' }), {
@@ -80,13 +118,7 @@ export async function POST(req: NextRequest) {
                 },
               },
               {
-                text: `You are an expert interior designer. I'm providing two images:
-1. First image: This is the room I want to redesign
-2. Second image: This is a reference room with the style/mood I want to achieve
-
-Please generate a new image that shows my room (first image) redesigned to match the style, mood, colors, materials, and aesthetic of the reference room (second image). Keep the basic layout and structure of my room, but transform the interior design elements (furniture style, color palette, lighting, textures, decorations) to match the reference.
-
-Generate a photorealistic interior design visualization that blends my room's layout with the reference room's aesthetic.`,
+                text: wrapPromptProfessionally(userPrompt),
               },
             ],
           },
