@@ -3,14 +3,14 @@
 import Header from '@/components/Header'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Sparkles, 
-  ArrowRight, 
-  Download, 
-  ZoomIn, 
-  X, 
-  Ruler, 
-  Home, 
+import {
+  Sparkles,
+  ArrowRight,
+  Download,
+  ZoomIn,
+  X,
+  Ruler,
+  Home,
   DoorOpen,
   Square,
   Bed,
@@ -68,7 +68,7 @@ export default function TwoDPlanCreatorPage() {
   const [windows, setWindows] = useState<number>(1)
   const [selectedStyle, setSelectedStyle] = useState<string>('modern')
   const [additionalNotes, setAdditionalNotes] = useState<string>('')
-  
+
   const [isGenerating, setIsGenerating] = useState(false)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -170,7 +170,7 @@ export default function TwoDPlanCreatorPage() {
               <Ruler className="w-4 h-4 text-emerald-400" />
               <span className="text-sm text-emerald-400">AI Plan Generator</span>
             </motion.div>
-            
+
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
               <span className="bg-gradient-to-r from-white via-white to-white/50 bg-clip-text text-transparent">
                 2D Plan Yaradıcı
@@ -208,11 +208,10 @@ export default function TwoDPlanCreatorPage() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleRoomSelect(room)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                        selectedRoom?.id === room.id
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${selectedRoom?.id === room.id
                           ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
                           : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:border-white/20'
-                      }`}
+                        }`}
                     >
                       {room.icon}
                       <span className="text-[10px] font-medium text-center leading-tight">{room.nameAz}</span>
@@ -397,11 +396,10 @@ export default function TwoDPlanCreatorPage() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setSelectedStyle(style.id)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                        selectedStyle === style.id
+                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${selectedStyle === style.id
                           ? 'bg-violet-500/20 border-violet-500/50 text-violet-300'
                           : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
-                      }`}
+                        }`}
                     >
                       {style.nameAz}
                     </motion.button>
@@ -460,7 +458,7 @@ export default function TwoDPlanCreatorPage() {
                   {selectedRoom ? (
                     <div className="relative flex flex-col items-center gap-4">
                       {/* Room Shape Preview */}
-                      <div 
+                      <div
                         className="border-2 border-dashed border-emerald-500/50 bg-emerald-500/10 rounded-lg flex items-center justify-center transition-all duration-300"
                         style={{
                           width: `${Math.min(200, width * 30)}px`,
@@ -603,7 +601,7 @@ export default function TwoDPlanCreatorPage() {
                         </div>
                         <div className="text-center">
                           <p className="text-white/40 text-sm">Nəticə burada görünəcək</p>
-                          <p className="text-white/30 text-xs mt-1">Parametrləri seçib "Yarat" basın</p>
+                          <p className="text-white/30 text-xs mt-1">Select parameters and click &quot;Create&quot;</p>
                         </div>
                       </motion.div>
                     )}
@@ -719,7 +717,7 @@ export default function TwoDPlanCreatorPage() {
             >
               <X className="w-6 h-6" />
             </motion.button>
-            
+
             <motion.img
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -729,7 +727,7 @@ export default function TwoDPlanCreatorPage() {
               className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
               onClick={(e) => e.stopPropagation()}
             />
-            
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

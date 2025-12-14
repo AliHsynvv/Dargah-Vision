@@ -1,481 +1,453 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Upload, Box, Sparkles, ArrowRight, Grid3x3, Home as HomeIcon, Layers } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Sparkles, ArrowRight, Box, Home as HomeIcon, Layers, Grid3x3, Play, Star, Users, Zap, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/components/Header'
 
+// Flip Card Component
+function FlipCard({
+  frontImage,
+  frontTitle,
+  frontSubtitle,
+  backTitle,
+  backDescription,
+  backHref,
+  delay = 0,
+}: {
+  frontImage: string
+  frontTitle: string
+  frontSubtitle: string
+  backTitle: string
+  backDescription: string
+  backHref: string
+  delay?: number
+}) {
+  const [isFlipped, setIsFlipped] = useState(false)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.6 }}
+      className="relative h-[450px] perspective-1000"
+      onMouseEnter={() => setIsFlipped(true)}
+      onMouseLeave={() => setIsFlipped(false)}
+    >
+      <motion.div
+        animate={{ rotateY: isFlipped ? 180 : 0 }}
+        transition={{ duration: 0.6, type: 'spring', stiffness: 100 }}
+        className="relative w-full h-full preserve-3d cursor-pointer"
+        style={{ transformStyle: 'preserve-3d' }}
+      >
+        {/* Front Side */}
+        <div
+          className="absolute inset-0 backface-hidden rounded-3xl overflow-hidden border border-white/10"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+          <div className="relative w-full h-full">
+            <Image
+              src={frontImage}
+              alt={frontTitle}
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-6">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60 mb-2">{frontSubtitle}</p>
+              <h3 className="text-2xl font-bold text-white">{frontTitle}</h3>
+            </div>
+            <div className="absolute top-4 right-4">
+              <motion.div
+                animate={{ rotate: [0, 10, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
+              >
+                <Play className="w-4 h-4 text-white fill-white" />
+              </motion.div>
+            </div>
+          </div>
+        </div>
+
+        {/* Back Side */}
+        <div
+          className="absolute inset-0 backface-hidden rounded-3xl overflow-hidden border border-white/20 bg-gradient-to-br from-white/10 to-white/5"
+          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+        >
+          <div className="relative w-full h-full p-8 flex flex-col justify-between">
+            <div>
+              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">{backTitle}</h3>
+              <p className="text-white/60 leading-relaxed">{backDescription}</p>
+            </div>
+            <Link
+              href={backHref}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-white/90 transition-all self-start group"
+            >
+              Get Started
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// Stats Counter with counting animation
+function StatCounter({ value, label, suffix = '' }: { value: number; label: string; suffix?: string }) {
+  const [count, setCount] = useState(0)
+  const [hasAnimated, setHasAnimated] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !hasAnimated) {
+          setHasAnimated(true)
+          // Animate count from 0 to value
+          const duration = 2000 // 2 seconds
+          const steps = 60
+          const increment = value / steps
+          let current = 0
+          const timer = setInterval(() => {
+            current += increment
+            if (current >= value) {
+              setCount(value)
+              clearInterval(timer)
+            } else {
+              setCount(Math.floor(current))
+            }
+          }, duration / steps)
+        }
+      },
+      { threshold: 0.5 }
+    )
+
+    if (ref.current) {
+      observer.observe(ref.current)
+    }
+
+    return () => observer.disconnect()
+  }, [value, hasAnimated])
+
+  return (
+    <div className="text-center" ref={ref}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        className="text-5xl md:text-6xl font-bold text-white mb-2"
+      >
+        {count}{suffix}
+      </motion.div>
+      <p className="text-white/50 text-sm uppercase tracking-[0.2em]">{label}</p>
+    </div>
+  )
+}
+
 export default function Home() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-black text-white overflow-hidden">
       <Header />
 
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {/* Floating Grid Lines */}
+      {/* Animated Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/5 via-transparent to-transparent" />
         <motion.div
-          animate={{
-            y: [0, -100, 0],
+          animate={{ opacity: [0.03, 0.06, 0.03] }}
+          transition={{ duration: 8, repeat: Infinity }}
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute top-0 left-0 w-full h-full opacity-5"
-        >
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="white" strokeWidth="0.5"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </motion.div>
-
-        {/* 3D Geometric Shapes */}
-        <motion.div
-          animate={{
-            rotate: [0, 360],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: 30,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute top-20 right-10 w-64 h-64 opacity-5"
-        >
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50,10 L90,30 L90,70 L50,90 L10,70 L10,30 Z" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M50,10 L50,50 L10,70" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M50,50 L90,70" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M50,50 L90,30" fill="none" stroke="white" strokeWidth="0.5"/>
-          </svg>
-        </motion.div>
-
-        <motion.div
-          animate={{
-            rotate: [360, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute bottom-40 left-10 w-48 h-48 opacity-5"
-        >
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="20" width="60" height="60" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M20,20 L50,5 L80,20" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M80,20 L95,50 L80,80" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M50,5 L50,35" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M50,35 L80,20" fill="none" stroke="white" strokeWidth="0.5"/>
-          </svg>
-        </motion.div>
-
-        {/* Blueprint-style Lines */}
-        <motion.div
-          animate={{
-            x: [0, 100, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute top-1/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
         />
-
-        <motion.div
-          animate={{
-            x: [100, 0, 100],
-          }}
-          transition={{
-            duration: 18,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute top-2/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
-        />
-
-        {/* Floating Architectural Elements */}
-        <motion.div
-          animate={{
-            y: [0, 30, 0],
-            rotate: [0, 5, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute top-1/4 right-1/4 w-32 h-32 opacity-10"
-        >
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M50,10 L50,90 M10,50 L90,50" stroke="white" strokeWidth="0.5"/>
-          </svg>
-        </motion.div>
-
-        <motion.div
-          animate={{
-            y: [0, -20, 0],
-            x: [0, 10, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute bottom-1/4 right-1/3 w-40 h-40 opacity-10"
-        >
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="50,15 90,85 10,85" fill="none" stroke="white" strokeWidth="0.5"/>
-            <path d="M50,15 L50,85 M25,57.5 L75,57.5" stroke="white" strokeWidth="0.5"/>
-          </svg>
-        </motion.div>
-
-        {/* Construction Grid Points */}
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            className="absolute w-1 h-1 bg-white/20 rounded-full"
-          />
-        ))}
       </div>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6">
+      <section className="relative pt-32 pb-24 px-6">
         <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center space-y-8"
-          >
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left Content */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-white/20 text-sm rounded-full"
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="space-y-8"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>AI Dəstəkli İnteryer Dizayn</span>
-            </motion.div>
-
-            <h1 className="text-6xl md:text-8xl font-bold tracking-tight max-w-5xl mx-auto">
-              Plan Çertyojlarını{' '}
-              <span className="text-white/50">Yaşayış Məkanlarına</span> Çevirin
-            </h1>
-
-            <p className="text-xl text-white/60 max-w-2xl mx-auto">
-              2D plan çertyojlarını AI gücü ilə heyrətamiz 3D modellərə və fotorealistik interyer dizaynlara çevirin
-            </p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="flex gap-4 justify-center pt-4"
-            >
-              <a
-                href="#apps"
-                className="group px-8 py-4 bg-white text-black font-medium text-lg flex items-center gap-2 hover:bg-white/90 transition-all duration-300 hover:shadow-2xl hover:shadow-white/20 rounded-full"
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/20 bg-white/5"
               >
-                Yaratmağa Başla
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </a>
-              <Link
-                href="/dashboard"
-                className="px-8 py-4 border border-white/20 font-medium text-lg hover:bg-white/5 transition-all duration-300 rounded-full"
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-sm text-white/70">AI-Powered Design Platform</span>
+              </motion.div>
+
+              <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight">
+                Transform Your{' '}
+                <span className="relative">
+                  <span className="relative z-10 bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent">
+                    Spaces
+                  </span>
+                  <motion.span
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: 0.5, duration: 0.6 }}
+                    className="absolute bottom-2 left-0 right-0 h-3 bg-white/10 -z-0 origin-left"
+                  />
+                </span>{' '}
+                Into Reality
+              </h1>
+
+              <p className="text-xl text-white/50 max-w-lg leading-relaxed">
+                Create photorealistic 3D models and professional interior designs from 2D floor plans. With just one click.
+              </p>
+
+              <div className="flex flex-wrap gap-4">
+                <Link
+                  href="/create"
+                  className="group inline-flex items-center gap-3 px-8 py-4 bg-white text-black font-semibold rounded-full hover:shadow-2xl hover:shadow-white/20 transition-all duration-300"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Start Free
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <a
+                  href="#features"
+                  className="inline-flex items-center gap-3 px-8 py-4 border border-white/20 font-medium rounded-full hover:bg-white/5 transition-all duration-300"
+                >
+                  <Play className="w-5 h-5" />
+                  How It Works
+                </a>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="flex items-center gap-6 pt-4">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-white/20 to-white/5 border-2 border-black flex items-center justify-center text-xs font-medium"
+                    >
+                      {String.fromCharCode(64 + i)}
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1 text-yellow-400">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} className="w-4 h-4 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-white/50">1000+ satisfied users</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right - Hero Image Stack */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative h-[500px] hidden lg:block"
+            >
+              {/* Stacked Images */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute top-0 right-0 w-[320px] h-[240px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl"
               >
-                Nümunələrə Bax
-              </Link>
-            </motion.div>
-          </motion.div>
+                <Image
+                  src="/photos/interier.png"
+                  alt="Interior Design"
+                  fill
+                  className="object-cover"
+                />
+              </motion.div>
 
-          {/* Feature Cards Grid */}
-          {/* (Previous small feature grid removed for a cleaner hero. The main app cards below now explain the flow.) */}
-        </div>
-      </section>
+              <motion.div
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute top-32 left-0 w-[280px] h-[200px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl"
+              >
+                <Image
+                  src="/photos/3d floor plan.png"
+                  alt="3D Floor Plan"
+                  fill
+                  className="object-cover"
+                />
+              </motion.div>
 
-      {/* Visual Flow: 2D Plan -> 3D Plan -> Interior */}
-      <section className="relative py-24 px-6 border-t border-white/10">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12 space-y-3"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold">Plandan Reallığa</h2>
-            <p className="text-white/60 text-sm md:text-base max-w-2xl mx-auto">
-              Layihənizin sadə 2D çertyojdan mebelli 3D interyerə necə çevrildiyini görün.
-            </p>
-          </motion.div>
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute bottom-0 right-12 w-[300px] h-[220px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl"
+              >
+                <Image
+                  src="/photos/home1.png"
+                  alt="Home Design"
+                  fill
+                  className="object-cover"
+                />
+              </motion.div>
 
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8">
-            {/* 2D Plan */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="w-full md:w-1/3"
-            >
-              <div className="relative rounded-3xl overflow-hidden border border-white/15 bg-white/5">
-                <div className="relative aspect-[4/3]">
-                  <Image
-                    src="/photos/furniture plan.png"
-                    alt="2D floor plan"
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 1024px) 33vw, 100vw"
-                  />
-                </div>
-                <div className="flex items-center justify-between px-4 py-3 text-xs md:text-sm">
-                  <span className="uppercase tracking-[0.2em] text-white/60">2D PLAN</span>
-                  <span className="text-white/40">Çertyoj</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Arrow */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="flex items-center justify-center"
-            >
-              <div className="flex md:flex-col items-center gap-2 text-white/40">
-                <motion.div
-                  animate={{ x: [0, 6, 0] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                  className="w-9 h-9 rounded-full border border-white/30 flex items-center justify-center bg-white/5"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </motion.div>
-                <span className="text-[10px] md:text-[11px] uppercase tracking-[0.25em]">
-                  to
-                </span>
-              </div>
-            </motion.div>
-
-            {/* 3D Plan */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="w-full md:w-1/3"
-            >
-              <div className="relative rounded-3xl overflow-hidden border border-white/15 bg-white/5">
-                <div className="relative aspect-[4/3]">
-                  <Image
-                    src="/photos/3d floor plan.png"
-                    alt="3D floor plan"
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 1024px) 33vw, 100vw"
-                  />
-                </div>
-                <div className="flex items-center justify-between px-4 py-3 text-xs md:text-sm">
-                  <span className="uppercase tracking-[0.2em] text-white/60">3D MODEL</span>
-                  <span className="text-white/40">Həcm</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Arrow */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center justify-center"
-            >
-              <div className="flex md:flex-col items-center gap-2 text-white/40">
-                <motion.div
-                  animate={{ x: [0, 6, 0] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                  className="w-9 h-9 rounded-full border border-white/30 flex items-center justify-center bg-white/5"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </motion.div>
-                <span className="text-[10px] md:text-[11px] uppercase tracking-[0.25em]">
-                  to
-                </span>
-              </div>
-            </motion.div>
-
-            {/* Interior Render */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="w-full md:w-1/3"
-            >
-              <div className="relative rounded-3xl overflow-hidden border border-white/15 bg-white/5">
-                <div className="relative aspect-[4/3]">
-                  <Image
-                    src="/photos/interier.png"
-                    alt="Interior render"
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 1024px) 33vw, 100vw"
-                  />
-                </div>
-                <div className="flex items-center justify-between px-4 py-3 text-xs md:text-sm">
-                  <span className="uppercase tracking-[0.2em] text-white/60">İNTERYER</span>
-                  <span className="text-white/40">Fotorealist</span>
-                </div>
-              </div>
+              {/* Floating Badge */}
+              <motion.div
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-3 bg-white/10 backdrop-blur-xl rounded-full border border-white/20"
+              >
+                <span className="text-sm font-medium">✨ AI Powered</span>
+              </motion.div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Features Section - Card Style */}
-      <section id="apps" className="relative py-32 px-6 border-t border-white/10">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center space-y-4 mb-20"
-          >
-            <h2 className="text-5xl font-bold">Məkanınızı Üç Addımda Dəyişdirin</h2>
-            <p className="text-xl text-white/60">Plan çertyojundan interyer dizayna AI dəstəkli iş axını</p>
-          </motion.div>
-
-          <AppCarousel />
+      {/* Stats Section */}
+      <section className="relative py-20 px-6 border-y border-white/10">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <StatCounter value={10} suffix="K+" label="Images Created" />
+            <StatCounter value={98} suffix="%" label="Satisfaction" />
+            <StatCounter value={50} suffix="+" label="Design Styles" />
+            <StatCounter value={24} suffix="/7" label="Support" />
+          </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="relative py-24 px-6 border-t border-white/10">
-        <div className="max-w-6xl mx-auto">
+      {/* Flip Cards Section */}
+      <section id="features" className="relative py-32 px-6">
+        <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-center mb-16 space-y-4"
           >
-            <h2 className="text-4xl md:text-5xl font-bold">Sadə və şəffaf qiymətlər</h2>
-            <p className="text-white/60 text-sm md:text-base">
-              Yalnız yaratdığınız şəkillər üçün ödəyin. Gizli ödənişlər yoxdur.
+            <span className="inline-block px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-white/60">
+              Features
+            </span>
+            <h2 className="text-4xl md:text-6xl font-bold">
+              Everything in One Platform
+            </h2>
+            <p className="text-xl text-white/50 max-w-2xl mx-auto">
+              Hover over the cards to discover our powerful features
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Başlanğıc */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col border border-white/15 rounded-3xl bg-white/5 p-8 space-y-6"
-            >
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold">Başlanğıc</h3>
-                <p className="text-white/50 text-sm">İş axınını sınamaq üçün ideal.</p>
-              </div>
-              <div className="space-y-1">
-                <div className="text-4xl font-bold">$15</div>
-                <div className="text-xs uppercase tracking-[0.25em] text-white/50">
-                  25 şəkil
-                </div>
-              </div>
-              <div className="space-y-2 text-sm text-white/60 flex-1">
-                <p>• 25-ə qədər render</p>
-                <p>• Bütün tətbiqlərə tam giriş</p>
-                <p>• Standart emal sürəti</p>
-              </div>
-              <button className="mt-4 w-full py-3 rounded-full bg-white text-black text-sm font-medium hover:bg-white/90 transition-all duration-300">
-                Başlanğıc Seç
-              </button>
-            </motion.div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <FlipCard
+              frontImage="/photos/3d floor plan.png"
+              frontTitle="2D to 3D"
+              frontSubtitle="Architecture"
+              backTitle="3D Conversion"
+              backDescription="Convert your floor plans into professional 3D models in seconds. Get volumetric visualization."
+              backHref="/apps/2d-to-3d"
+              delay={0}
+            />
+            <FlipCard
+              frontImage="/photos/interier.png"
+              frontTitle="AI Interior"
+              frontSubtitle="Design"
+              backTitle="Interior Design"
+              backDescription="Create photorealistic interior designs with AI power. 50+ style options available."
+              backHref="/apps/interior-design"
+              delay={0.1}
+            />
+            <FlipCard
+              frontImage="/photos/furniture plan.png"
+              frontTitle="Furniture Plan"
+              frontSubtitle="Planning"
+              backTitle="Smart Placement"
+              backDescription="AI automatically calculates optimal furniture placement for your room."
+              backHref="/apps/furniture-plan"
+              delay={0.2}
+            />
+            <FlipCard
+              frontImage="/photos/home1.png"
+              frontTitle="Exterior"
+              frontSubtitle="Outdoor View"
+              backTitle="Exterior Design"
+              backDescription="Design the exterior of your building. Facade, garden, and landscape."
+              backHref="/create"
+              delay={0.3}
+            />
+          </div>
+        </div>
+      </section>
 
-            {/* Pro */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.05 }}
-              className="flex flex-col border border-white rounded-3xl bg-white text-black p-8 space-y-6 shadow-2xl shadow-white/10 relative overflow-hidden"
-            >
-              <div className="absolute inset-x-8 -top-5 flex justify-center">
-                <span className="px-4 py-1 rounded-full text-[11px] font-medium tracking-[0.18em] bg-black text-white uppercase">
-                  Ən Populyar
-                </span>
-              </div>
-              <div className="space-y-2 pt-4">
-                <h3 className="text-xl font-semibold">Pro</h3>
-                <p className="text-black/60 text-sm">Dizaynerlər və kiçik studiyalar üçün.</p>
-              </div>
-              <div className="space-y-1">
-                <div className="text-4xl font-bold">$29</div>
-                <div className="text-xs uppercase tracking-[0.25em] text-black/60">
-                  60 şəkil
-                </div>
-              </div>
-              <div className="space-y-2 text-sm text-black/70 flex-1">
-                <p>• 60-a qədər render</p>
-                <p>• Prioritet emal</p>
-                <p>• Kommersiya istifadəsi</p>
-              </div>
-              <button className="mt-4 w-full py-3 rounded-full bg-black text-white text-sm font-medium hover:bg-black/90 transition-all duration-300">
-                Pro Seç
-              </button>
-            </motion.div>
+      {/* Process Section */}
+      <section className="relative py-32 px-6 border-t border-white/10">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-20 space-y-4"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold">How It Works?</h2>
+            <p className="text-white/50 max-w-xl mx-auto">
+              Get professional results in just 3 simple steps
+            </p>
+          </motion.div>
 
-            {/* Studiya */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="flex flex-col border border-white/15 rounded-3xl bg-white/5 p-8 space-y-6"
-            >
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold">Studiya</h3>
-                <p className="text-white/50 text-sm">Agentliklər və peşəkarlar üçün ən yaxşısı.</p>
-              </div>
-              <div className="space-y-1">
-                <div className="text-4xl font-bold">$49</div>
-                <div className="text-xs uppercase tracking-[0.25em] text-white/50">
-                  120 şəkil
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                step: '01',
+                title: 'Upload',
+                description: 'Upload your floor plan or reference image',
+                icon: <Box className="w-8 h-8" />,
+              },
+              {
+                step: '02',
+                title: 'Customize',
+                description: 'Select your style, colors, and materials',
+                icon: <Layers className="w-8 h-8" />,
+              },
+              {
+                step: '03',
+                title: 'Generate',
+                description: 'AI creates professional results in seconds',
+                icon: <Sparkles className="w-8 h-8" />,
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="relative group"
+              >
+                <div className="p-8 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-300">
+                  <div className="text-6xl font-bold text-white/10 absolute top-4 right-6">
+                    {item.step}
+                  </div>
+                  <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+                  <p className="text-white/50">{item.description}</p>
                 </div>
-              </div>
-              <div className="space-y-2 text-sm text-white/60 flex-1">
-                <p>• 120-yə qədər render</p>
-                <p>• Ən yüksək prioritet növbə</p>
-                <p>• Komanda istifadəsi daxildir</p>
-              </div>
-              <button className="mt-4 w-full py-3 rounded-full bg-white text-black text-sm font-medium hover:bg-white/90 transition-all duration-300">
-                Studiya Seç
-              </button>
-            </motion.div>
+                {i < 2 && (
+                  <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2">
+                    <ChevronRight className="w-8 h-8 text-white/20" />
+                  </div>
+                )}
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -486,249 +458,89 @@ export default function Home() {
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="max-w-5xl mx-auto text-center space-y-8 border border-white/20 p-16 rounded-3xl"
+          className="max-w-4xl mx-auto relative"
         >
-          <h2 className="text-5xl font-bold">Məkanınızı Dəyişdirməyə Hazırsınız?</h2>
-          <p className="text-xl text-white/60">
-            Bu gün plan çertyojlarınızdan gözəl 3D interyer dizaynlar yaratmağa başlayın
-          </p>
-          <a
-            href="#apps"
-            className="inline-flex items-center gap-2 px-10 py-5 bg-white text-black font-medium text-lg hover:bg-white/90 transition-all duration-300 hover:shadow-2xl hover:shadow-white/20 rounded-full"
-          >
-            İndi Başla
-            <ArrowRight className="w-5 h-5" />
-          </a>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/5 to-white/10 rounded-[40px] blur-xl" />
+          <div className="relative p-12 md:p-20 rounded-[40px] border border-white/20 bg-black/50 backdrop-blur-xl text-center space-y-8">
+            <motion.div
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+              className="w-20 h-20 mx-auto rounded-full border border-white/20 flex items-center justify-center"
+            >
+              <Sparkles className="w-10 h-10" />
+            </motion.div>
+            <h2 className="text-4xl md:text-5xl font-bold">
+              Ready to Start Designing?
+            </h2>
+            <p className="text-xl text-white/50 max-w-lg mx-auto">
+              Start free today and transform your spaces with AI power
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link
+                href="/create"
+                className="group inline-flex items-center gap-3 px-10 py-5 bg-white text-black font-semibold text-lg rounded-full hover:shadow-2xl hover:shadow-white/30 transition-all duration-300"
+              >
+                <Sparkles className="w-5 h-5" />
+                Get Started
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+          </div>
         </motion.div>
       </section>
 
       {/* Footer */}
-      <footer className="relative border-t border-white/10 py-12 px-6">
-        <div className="max-w-7xl mx-auto text-center text-white/40 text-sm">
-          <p>© 2024 Dargah Vision. Bütün hüquqlar qorunur.</p>
+      <footer className="relative border-t border-white/10 py-16 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-12">
+            <div className="space-y-4">
+              <h3 className="text-2xl font-bold">Dargah Vision</h3>
+              <p className="text-white/50 text-sm">
+                AI-powered interior and architectural design platform
+              </p>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-semibold uppercase tracking-wider text-sm text-white/60">Product</h4>
+              <div className="space-y-2">
+                <Link href="/create" className="block text-white/50 hover:text-white transition-colors">Create Design</Link>
+                <Link href="/apps/interior-design" className="block text-white/50 hover:text-white transition-colors">Interior Design</Link>
+                <Link href="/apps/2d-to-3d" className="block text-white/50 hover:text-white transition-colors">3D Conversion</Link>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-semibold uppercase tracking-wider text-sm text-white/60">Company</h4>
+              <div className="space-y-2">
+                <a href="#" className="block text-white/50 hover:text-white transition-colors">About</a>
+                <a href="#" className="block text-white/50 hover:text-white transition-colors">Careers</a>
+                <a href="#" className="block text-white/50 hover:text-white transition-colors">Contact</a>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-semibold uppercase tracking-wider text-sm text-white/60">Legal</h4>
+              <div className="space-y-2">
+                <a href="#" className="block text-white/50 hover:text-white transition-colors">Privacy</a>
+                <a href="#" className="block text-white/50 hover:text-white transition-colors">Terms</a>
+              </div>
+            </div>
+          </div>
+          <div className="mt-12 pt-8 border-t border-white/10 text-center text-white/40 text-sm">
+            <p>© 2024 Dargah Vision. All rights reserved.</p>
+          </div>
         </div>
       </footer>
+
+      {/* Custom Styles for 3D Transform */}
+      <style jsx global>{`
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        .preserve-3d {
+          transform-style: preserve-3d;
+        }
+        .backface-hidden {
+          backface-visibility: hidden;
+        }
+      `}</style>
     </main>
   )
 }
-
-type AppCardConfig = {
-  tag: string
-  title: string
-  description: string
-  icon: React.ReactNode
-  href: string
-  imageSrc?: string
-}
-
-function AppCarousel() {
-  const cards: AppCardConfig[] = [
-    {
-      tag: 'Memarlıq',
-      title: '2D-dən 3D-yə Çevirmə',
-      description: 'Plan çertyojlarınızdan memarlıq texniki perspektiv kəsik renderləri yaradın',
-      icon: <Box className="w-16 h-16" />,
-      href: '/apps/2d-to-3d',
-      imageSrc: '/photos/3d floor plan.png',
-    },
-    {
-      tag: 'İnteryer',
-      title: 'AI İnteryer Dizayn',
-      description: 'Təmiz, minimal üslubla AI dəstəkli interyer dizayn konseptləri yaradın',
-      icon: <Sparkles className="w-16 h-16" />,
-      href: '/apps/interior-design',
-      imageSrc: '/photos/interier.png',
-    },
-    {
-      tag: 'Planlaşdırma',
-      title: 'Mebel Planı',
-      description: 'Boş plan çertyojları üçün AI yerləşdirməsi ilə mebel düzümləri yaradın',
-      icon: <Grid3x3 className="w-16 h-16" />,
-      href: '/apps/furniture-plan',
-      imageSrc: '/photos/furniture plan.png',
-    },
-    {
-      tag: 'İnteryer',
-      title: 'Referans Dizayn',
-      description: 'Otağınızı referans şəklin əhval-ruhiyyəsi, materialları və işıqlandırması ilə uyğunlaşdırın',
-      icon: <Layers className="w-16 h-16" />,
-      href: '/apps/design-room-reference',
-      imageSrc: '/photos/ref.png',
-    },
-  ]
-
-  const [index, setIndex] = useState(0)
-  const visible = 3
-  const total = cards.length
-
-  const next = () => setIndex((prev) => (prev + 1) % total)
-  const prev = () => setIndex((prev) => (prev - 1 + total) % total)
-
-  useEffect(() => {
-    if (total <= visible) return
-    const id = setInterval(() => {
-      setIndex((prev) => (prev + 1) % total)
-    }, 5000)
-    return () => clearInterval(id)
-  }, [total])
-
-  const visibleCards = Array.from({ length: Math.min(visible, total) }, (_, i) => {
-    const idx = (index + i) % total
-    return cards[idx]
-  })
-
-  return (
-    <div className="relative">
-      <motion.div
-        key={index}
-        initial={{ opacity: 0, x: 60 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -60 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="grid md:grid-cols-3 gap-6"
-      >
-        {visibleCards.map((card, i) => (
-          <FeatureAppCard
-            key={`${card.title}-${i}`}
-            tag={card.tag}
-            title={card.title}
-            description={card.description}
-            icon={card.icon}
-            delay={0.1 + i * 0.05}
-            href={card.href}
-            imageSrc={card.imageSrc}
-          />
-        ))}
-      </motion.div>
-
-      {/* Controls & Indicators */}
-      <div className="mt-8 flex items-center justify-center gap-4">
-        <button
-          onClick={prev}
-          className="w-10 h-10 rounded-full border border-white/20 hover:bg-white/10 transition-colors flex items-center justify-center"
-        >
-          <ArrowRight className="w-4 h-4 rotate-180" />
-        </button>
-        
-        {/* Dots */}
-        <div className="flex gap-2">
-          {cards.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIndex(i)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                i === index ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50'
-              }`}
-            />
-          ))}
-        </div>
-
-        <button
-          onClick={next}
-          className="w-10 h-10 rounded-full border border-white/20 hover:bg-white/10 transition-colors flex items-center justify-center"
-        >
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function FeatureCard({ 
-  icon, 
-  title, 
-  description, 
-  delay 
-}: { 
-  icon: React.ReactNode
-  title: string
-  description: string
-  delay: number
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay, duration: 0.6 }}
-      className="group p-8 border border-white/10 hover:border-white/30 transition-all duration-500 hover:shadow-xl hover:shadow-white/5 rounded-2xl"
-    >
-      <div className="w-12 h-12 mb-6 text-white group-hover:scale-110 transition-transform duration-300">
-        {icon}
-      </div>
-      <h3 className="text-xl font-semibold mb-3">{title}</h3>
-      <p className="text-white/60 leading-relaxed">{description}</p>
-    </motion.div>
-  )
-}
-
-function FeatureAppCard({
-  tag,
-  title,
-  description,
-  icon,
-  delay,
-  href,
-  imageSrc
-}: {
-  tag: string
-  title: string
-  description: string
-  icon: React.ReactNode
-  delay: number
-  href: string
-  imageSrc?: string
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay, duration: 0.6 }}
-      className="group flex flex-col border border-white/10 hover:border-white/30 transition-all duration-500 overflow-hidden hover:shadow-2xl hover:shadow-white/5 rounded-2xl"
-    >
-      {/* Large Image Area */}
-      <div className="aspect-[4/3] bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center relative overflow-hidden">
-        {imageSrc ? (
-          <>
-            <Image
-              src={imageSrc}
-              alt={title}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          </>
-        ) : (
-          <>
-            <div className="text-white/20 group-hover:scale-110 group-hover:text-white/30 transition-all duration-500">
-              {icon}
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
-          </>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-8 flex flex-col flex-1">
-        <div className="mb-4">
-          <span className="inline-block px-3 py-1 bg-white/10 text-xs font-medium uppercase tracking-wider mb-4 rounded-full">
-            {tag}
-          </span>
-        </div>
-        
-        <h3 className="text-2xl font-bold mb-3">{title}</h3>
-        <p className="text-white/60 leading-relaxed mb-6 flex-1">{description}</p>
-        
-        <Link
-          href={href}
-          className="group/btn inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-medium hover:bg-white/90 transition-all duration-300 hover:shadow-lg hover:shadow-white/20 self-start rounded-full"
-        >
-          <Sparkles className="w-4 h-4" />
-          Tətbiqi Aç
-        </Link>
-      </div>
-    </motion.div>
-  )
-}
-

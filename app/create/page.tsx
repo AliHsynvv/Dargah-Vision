@@ -1,90 +1,116 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Wand2, Clock, ArrowRight, LayoutTemplate, Palette, Lightbulb, Sofa, Layers, CheckCircle, Copy, X } from 'lucide-react'
+import { Sparkles, Wand2, Clock, ArrowRight, Image as ImageIcon, Upload, X, Download, RefreshCw, CheckCircle, Home, Building2, ZoomIn } from 'lucide-react'
 import Header from '@/components/Header'
 
-interface DesignConcept {
-  title: string
-  subtitle: string
-  description: string
-  style: string
-  colorPalette: {
-    primary: string
-    secondary: string
-    accent: string
-    neutral: string
-  }
-  materials: string[]
-  furniture: string[]
-  lighting: {
-    natural: string
-    artificial: string
-    ambient: string
-  }
-  zones: string[]
-  focalPoints: string[]
-  mood: string
-  tags: string[]
-  tips: string[]
-}
+type DesignType = 'interior' | 'exterior'
 
 export default function CreatePage() {
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
-  const [concept, setConcept] = useState<DesignConcept | null>(null)
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+  const [referenceImage, setReferenceImage] = useState<string | null>(null)
+  const [designType, setDesignType] = useState<DesignType>('interior')
   const [error, setError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [showFullConcept, setShowFullConcept] = useState(false)
+  const [showZoomModal, setShowZoomModal] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
     setIsGenerating(true)
     setError(null)
+    setGeneratedImage(null)
 
     try {
-      const response = await fetch('/api/create-design', {
+      const response = await fetch('/api/create-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          referenceImage: referenceImage,
+          designType: designType
+        }),
       })
 
       if (!response.ok) {
-        throw new Error('API xətası')
+        throw new Error('API error')
       }
 
       const data = await response.json()
 
-      if (data.success && data.concept) {
-        setConcept(data.concept)
+      if (data.success && data.imageUrl) {
+        setGeneratedImage(data.imageUrl)
       } else {
-        setError(data.error || 'Gözlənilməz xəta baş verdi')
+        setError(data.error || 'Failed to generate image')
       }
     } catch (err) {
       console.error(err)
-      setError('Dizayn yaradılarkən xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.')
+      setError('An error occurred while generating the image. Please try again.')
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleCopy = () => {
-    if (!concept) return
-    const text = JSON.stringify(concept, null, 2)
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size must be less than 10MB')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setReferenceImage(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
-  const presets = [
-    'İsti palıd döşəmə ilə İskandinav 2 otaqlı mənzil',
-    'Tavandan döşəməyə pəncərələri olan minimal beton loft',
-    'Dolayı işıqlandırmalı neytral tonlarda lüks otel süiti',
-    'Ada və yemək guşəsi olan açıq planlı mətbəx + qonaq otağı',
+  const handleRemoveReference = () => {
+    setReferenceImage(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleDownload = () => {
+    if (!generatedImage) return
+    const link = document.createElement('a')
+    link.href = generatedImage
+    link.download = `dargah-${designType}-design-${Date.now()}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleNewDesign = () => {
+    setGeneratedImage(null)
+    setReferenceImage(null)
+    setPrompt('')
+    setError(null)
+  }
+
+  const interiorPresets = [
+    'Scandinavian living room with warm oak flooring',
+    'Minimal loft with concrete walls',
+    'Luxury hotel suite in neutral tones',
+    'Open plan modern kitchen',
   ]
+
+  const exteriorPresets = [
+    'Modern villa with large glass windows',
+    'Minimal garden house with wood facade',
+    'Luxury home with pool, night view',
+    'Scandinavian style cottage, winter scene',
+  ]
+
+  const presets = designType === 'interior' ? interiorPresets : exteriorPresets
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -100,7 +126,7 @@ export default function CreatePage() {
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/15 text-xs text-white/60"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI düzüm və interyer yaratma</span>
+            <span>AI {designType === 'interior' ? 'Interior' : 'Exterior'} Image Generation</span>
           </motion.div>
 
           <motion.h1
@@ -109,8 +135,8 @@ export default function CreatePage() {
             transition={{ duration: 0.7, delay: 0.1 }}
             className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight max-w-2xl"
           >
-            Xəyal etdiyiniz məkanı təsvir edin.{' '}
-            <span className="text-white/50">Biz sizin üçün dizayn edirik.</span>
+            Describe your dream space.{' '}
+            <span className="text-white/50">AI will create it.</span>
           </motion.h1>
 
           <motion.p
@@ -119,19 +145,58 @@ export default function CreatePage() {
             transition={{ duration: 0.6, delay: 0.15 }}
             className="text-sm sm:text-base text-white/60 max-w-2xl"
           >
-            İdeal interyeriniz və ya düzümünüz haqqında qısa bir prompt yazın. AI peşəkar dizayn konsepti yaradacaq.
+            Write a short prompt about your ideal {designType === 'interior' ? 'interior' : 'exterior'}. You can also add a reference image.
           </motion.p>
         </section>
 
         {/* Main grid */}
         <section className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-8">
-          {/* Left: Prompt */}
+          {/* Left: Prompt & Reference Image */}
           <motion.div
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
+            {/* Design Type Toggle */}
+            <div className="rounded-3xl border border-white/15 bg-white/5 p-4 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="w-4 h-4 text-white/70" />
+                <span className="text-xs sm:text-sm font-medium uppercase tracking-[0.22em] text-white/60">
+                  Design Type
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setDesignType('interior')}
+                  className={`flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all duration-300 ${designType === 'interior'
+                      ? 'bg-white text-black border-white'
+                      : 'bg-white/5 text-white/70 border-white/15 hover:border-white/30'
+                    }`}
+                >
+                  <Home className="w-5 h-5" />
+                  <span className="font-medium">Interior</span>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setDesignType('exterior')}
+                  className={`flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all duration-300 ${designType === 'exterior'
+                      ? 'bg-white text-black border-white'
+                      : 'bg-white/5 text-white/70 border-white/15 hover:border-white/30'
+                    }`}
+                >
+                  <Building2 className="w-5 h-5" />
+                  <span className="font-medium">Exterior</span>
+                </motion.button>
+              </div>
+            </div>
+
+            {/* Prompt Section */}
             <div className="rounded-3xl border border-white/15 bg-white/5 p-4 sm:p-6 space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -142,7 +207,7 @@ export default function CreatePage() {
                 </div>
                 <div className="flex items-center gap-2 text-[10px] sm:text-xs text-white/40">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>~10-15 san</span>
+                  <span>~15-30 sec</span>
                 </div>
               </div>
 
@@ -150,7 +215,10 @@ export default function CreatePage() {
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Məs: Palıd döşəmə, L formalı divan və tavanın ətrafında gizli LED işıqlandırma ilə parlaq İskandinav qonaq otağı."
+                  placeholder={designType === 'interior'
+                    ? "E.g., Bright Scandinavian living room with oak flooring, L-shaped sofa, and hidden LED lighting around the ceiling."
+                    : "E.g., Modern villa with large glass windows, white facade, and green garden."
+                  }
                   className="w-full min-h-[140px] max-h-[260px] bg-black/40 border border-white/15 focus:border-white/40 transition-colors rounded-2xl px-4 py-3 text-sm sm:text-base resize-vertical outline-none"
                 />
                 <div className="absolute bottom-3 right-4 text-[10px] sm:text-xs text-white/40">
@@ -170,47 +238,101 @@ export default function CreatePage() {
                   </button>
                 ))}
               </div>
+            </div>
 
-              <div className="flex items-center justify-between gap-4 pt-1">
-                <div className="hidden sm:flex flex-col text-[10px] text-white/40">
-                  <span>İpucu: Əhval-ruhiyyə, materiallar, işıqlandırma və əsas mebel parçalarını qeyd edin.</span>
-                </div>
-                <motion.button
-                  whileHover={!isGenerating ? { scale: 1.02 } : undefined}
-                  whileTap={!isGenerating ? { scale: 0.97 } : undefined}
-                  onClick={handleGenerate}
-                  disabled={!prompt.trim() || isGenerating}
-                  className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-full bg-white text-black text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/90 transition-all duration-300"
-                >
-                  {isGenerating ? (
-                    <>
-                      <motion.span
-                        className="inline-block w-4 h-4 rounded-full border-2 border-black border-t-transparent"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
-                      />
-                      Yaradılır…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Dizayn yarat
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </motion.button>
+            {/* Reference Image Section */}
+            <div className="rounded-3xl border border-white/15 bg-white/5 p-4 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-white/70" />
+                <span className="text-xs sm:text-sm font-medium uppercase tracking-[0.22em] text-white/60">
+                  Reference Image (Optional)
+                </span>
               </div>
 
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl"
-                >
-                  <p className="text-sm text-red-400 text-center">{error}</p>
-                </motion.div>
-              )}
+              <AnimatePresence mode="wait">
+                {!referenceImage ? (
+                  <motion.div
+                    key="upload"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/20 hover:border-white/40 transition-all duration-300 p-8 text-center cursor-pointer rounded-2xl group"
+                  >
+                    <Upload className="w-10 h-10 mx-auto mb-3 text-white/40 group-hover:text-white/60 transition-colors" />
+                    <p className="text-sm text-white/60 mb-1">Upload an image</p>
+                    <p className="text-xs text-white/40">PNG, JPG, WEBP (up to 10MB)</p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="preview"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="relative rounded-2xl overflow-hidden"
+                  >
+                    <img
+                      src={referenceImage}
+                      alt="Reference"
+                      className="w-full h-48 object-cover"
+                    />
+                    <button
+                      onClick={handleRemoveReference}
+                      className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 rounded text-xs text-white/80">
+                      Reference image
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
             </div>
+
+            {/* Generate Button */}
+            <motion.button
+              whileHover={!isGenerating ? { scale: 1.02 } : undefined}
+              whileTap={!isGenerating ? { scale: 0.97 } : undefined}
+              onClick={handleGenerate}
+              disabled={!prompt.trim() || isGenerating}
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white text-black text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/90 transition-all duration-300"
+            >
+              {isGenerating ? (
+                <>
+                  <motion.span
+                    className="inline-block w-5 h-5 rounded-full border-2 border-black border-t-transparent"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+                  />
+                  Generating image…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  Generate {designType === 'interior' ? 'Interior' : 'Exterior'} Image
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </motion.button>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl"
+              >
+                <p className="text-sm text-red-400 text-center">{error}</p>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Right: Result */}
@@ -220,28 +342,48 @@ export default function CreatePage() {
             transition={{ duration: 0.6 }}
             className="space-y-4"
           >
-            <div className="rounded-3xl border border-white/15 bg-white/5 p-4 sm:p-6 min-h-[500px]">
+            <div className="rounded-3xl border border-white/15 bg-white/5 p-4 sm:p-6 min-h-[600px]">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <LayoutTemplate className="w-4 h-4 text-white/70" />
+                  <ImageIcon className="w-4 h-4 text-white/70" />
                   <span className="text-xs sm:text-sm font-medium uppercase tracking-[0.22em] text-white/60">
-                    Dizayn Konsepti
+                    Generated Image
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {concept && (
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      onClick={handleCopy}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 text-[10px] sm:text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                    >
-                      {copied ? <CheckCircle className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      {copied ? 'Kopyalandı!' : 'Kopyala'}
-                    </motion.button>
+                  {generatedImage && (
+                    <>
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={() => setShowZoomModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 text-[10px] sm:text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <ZoomIn className="w-3.5 h-3.5" />
+                        Zoom
+                      </motion.button>
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={handleDownload}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 text-[10px] sm:text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download
+                      </motion.button>
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={handleNewDesign}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 text-[10px] sm:text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        New
+                      </motion.button>
+                    </>
                   )}
                   <span className="text-[10px] sm:text-xs text-white/40">
-                    {concept ? 'AI Konsept v1.0' : 'Prompt gözlənilir'}
+                    {generatedImage ? 'AI Image v1.0' : 'Waiting for prompt'}
                   </span>
                 </div>
               </div>
@@ -253,174 +395,80 @@ export default function CreatePage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center py-20 gap-6"
+                    className="flex flex-col items-center justify-center py-32 gap-6"
                   >
                     <div className="relative">
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                        className="w-20 h-20 border-2 border-white/10 rounded-full"
+                        className="w-24 h-24 border-2 border-white/10 rounded-full"
                       />
                       <motion.div
                         animate={{ rotate: -360 }}
                         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                         className="absolute inset-2 border-2 border-t-white border-r-transparent border-b-transparent border-l-transparent rounded-full"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Sparkles className="w-6 h-6 text-white/60" />
-                      </div>
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        {designType === 'interior' ? (
+                          <Home className="w-8 h-8 text-white/60" />
+                        ) : (
+                          <Building2 className="w-8 h-8 text-white/60" />
+                        )}
+                      </motion.div>
                     </div>
                     <div className="text-center">
-                      <p className="text-white/80 font-medium">Dizayn konseptiniz yaradılır</p>
-                      <p className="text-white/40 text-sm mt-1">AI peşəkar təkliflər hazırlayır...</p>
+                      <p className="text-white/80 font-medium text-lg">
+                        Creating your {designType === 'interior' ? 'interior' : 'exterior'} image
+                      </p>
+                      <p className="text-white/40 text-sm mt-2">AI is generating a professional {designType === 'interior' ? 'interior' : 'exterior'} design...</p>
+                      <p className="text-white/30 text-xs mt-4">This process may take 15-30 seconds</p>
                     </div>
                   </motion.div>
-                ) : concept ? (
+                ) : generatedImage ? (
                   <motion.div
                     key="result"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="space-y-6"
+                    className="space-y-4"
                   >
-                    {/* Title & Style */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-full bg-white/10 text-[10px] uppercase tracking-wider text-white/60">
-                          {concept.style}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full bg-white/10 text-[10px] uppercase tracking-wider text-white/60">
-                          {concept.mood}
+                    <div
+                      className="relative rounded-2xl overflow-hidden bg-black/20 cursor-zoom-in group"
+                      onClick={() => setShowZoomModal(true)}
+                    >
+                      <img
+                        src={generatedImage}
+                        alt="Generated design"
+                        className="w-full h-auto transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          whileHover={{ opacity: 1, scale: 1 }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <ZoomIn className="w-12 h-12 text-white/80" />
+                        </motion.div>
+                      </div>
+                      <div className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-full">
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                        <span className="text-xs text-white/80">
+                          Generated by AI ({designType === 'interior' ? 'Interior' : 'Exterior'})
                         </span>
                       </div>
-                      <h2 className="text-xl sm:text-2xl font-semibold">{concept.title}</h2>
-                      <p className="text-sm text-white/60">{concept.subtitle}</p>
                     </div>
 
-                    {/* Description */}
                     <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                      <p className="text-sm text-white/70 leading-relaxed">{concept.description}</p>
-                    </div>
-
-                    {/* Color Palette */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Palette className="w-4 h-4 text-white/60" />
-                        <span className="text-xs font-medium uppercase tracking-wider text-white/60">Rəng Palitrası</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-3">
-                        {Object.entries(concept.colorPalette).map(([name, color]) => (
-                          <div key={name} className="space-y-1.5">
-                            <div
-                              className="h-12 rounded-xl border border-white/10"
-                              style={{ backgroundColor: color.includes('#') ? color.split(' ').pop() : '#666' }}
-                            />
-                            <p className="text-[10px] text-white/50 text-center capitalize">{name === 'primary' ? 'Əsas' : name === 'secondary' ? 'İkinci' : name === 'accent' ? 'Vurğu' : 'Neytral'}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Materials & Furniture Grid */}
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      {/* Materials */}
-                      <div className="space-y-3 p-4 rounded-2xl bg-white/5 border border-white/10">
-                        <div className="flex items-center gap-2">
-                          <Layers className="w-4 h-4 text-white/60" />
-                          <span className="text-xs font-medium uppercase tracking-wider text-white/60">Materiallar</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {concept.materials.map((material, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded-full bg-white/10 text-xs text-white/70">
-                              {material}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Zones */}
-                      <div className="space-y-3 p-4 rounded-2xl bg-white/5 border border-white/10">
-                        <div className="flex items-center gap-2">
-                          <LayoutTemplate className="w-4 h-4 text-white/60" />
-                          <span className="text-xs font-medium uppercase tracking-wider text-white/60">Zonalar</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {concept.zones.map((zone, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded-full bg-white/10 text-xs text-white/70">
-                              {zone}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Furniture */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Sofa className="w-4 h-4 text-white/60" />
-                        <span className="text-xs font-medium uppercase tracking-wider text-white/60">Mebel</span>
-                      </div>
-                      <div className="grid sm:grid-cols-2 gap-2">
-                        {concept.furniture.map((item, i) => (
-                          <div key={i} className="flex items-start gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
-                            <CheckCircle className="w-4 h-4 text-green-400/60 mt-0.5 flex-shrink-0" />
-                            <span className="text-xs text-white/70">{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Lighting */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Lightbulb className="w-4 h-4 text-white/60" />
-                        <span className="text-xs font-medium uppercase tracking-wider text-white/60">İşıqlandırma</span>
-                      </div>
-                      <div className="grid sm:grid-cols-3 gap-3">
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                          <p className="text-[10px] text-white/40 mb-1">Təbii</p>
-                          <p className="text-xs text-white/70">{concept.lighting.natural}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                          <p className="text-[10px] text-white/40 mb-1">Süni</p>
-                          <p className="text-xs text-white/70">{concept.lighting.artificial}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                          <p className="text-[10px] text-white/40 mb-1">Ambient</p>
-                          <p className="text-xs text-white/70">{concept.lighting.ambient}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tips */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Wand2 className="w-4 h-4 text-white/60" />
-                        <span className="text-xs font-medium uppercase tracking-wider text-white/60">Peşəkar Məsləhətlər</span>
-                      </div>
-                      <div className="space-y-2">
-                        {concept.tips.map((tip, i) => (
-                          <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-white/5 to-transparent border border-white/10">
-                            <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
-                              {i + 1}
-                            </span>
-                            <span className="text-xs text-white/70">{tip}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
-                      {concept.tags.map((tag, i) => (
-                        <span key={i} className="px-3 py-1 rounded-full border border-white/15 text-[10px] text-white/50">
-                          #{tag}
-                        </span>
-                      ))}
+                      <p className="text-xs text-white/50 mb-1">Prompt:</p>
+                      <p className="text-sm text-white/80">{prompt}</p>
                     </div>
 
                     <div className="flex items-center justify-between text-[10px] text-white/40 pt-2">
-                      <span>AI tərəfindən yaradılmış peşəkar dizayn konsepti</span>
+                      <span>Professional {designType === 'interior' ? 'interior' : 'exterior'} image generated by AI</span>
                       <span>Dargah Vision</span>
                     </div>
                   </motion.div>
@@ -430,7 +478,7 @@ export default function CreatePage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="relative flex-1 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 overflow-hidden min-h-[400px]"
+                    className="relative flex-1 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 overflow-hidden min-h-[500px]"
                   >
                     {/* Animated background grid */}
                     <motion.div
@@ -455,13 +503,17 @@ export default function CreatePage() {
                     </motion.div>
 
                     <div className="relative h-full flex flex-col justify-center items-center p-8 gap-4">
-                      <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center">
-                        <Sparkles className="w-10 h-10 text-white/20" />
+                      <div className="w-24 h-24 rounded-2xl bg-white/5 flex items-center justify-center">
+                        {designType === 'interior' ? (
+                          <Home className="w-12 h-12 text-white/20" />
+                        ) : (
+                          <Building2 className="w-12 h-12 text-white/20" />
+                        )}
                       </div>
                       <div className="text-center space-y-2">
-                        <h3 className="text-lg font-medium text-white/60">Konseptiniz burada görünəcək</h3>
+                        <h3 className="text-xl font-medium text-white/60">Your image will appear here</h3>
                         <p className="text-sm text-white/40 max-w-sm">
-                          Solda xəyal etdiyiniz məkanı təsvir edin və AI sizin üçün peşəkar dizayn konsepti yaradacaq.
+                          Describe your dream {designType === 'interior' ? 'interior' : 'exterior'} on the left and AI will create a professional image for you.
                         </p>
                       </div>
                     </div>
@@ -472,6 +524,55 @@ export default function CreatePage() {
           </motion.div>
         </section>
       </main>
+
+      {/* Zoom Modal */}
+      <AnimatePresence>
+        {showZoomModal && generatedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowZoomModal(false)}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative max-w-[95vw] max-h-[95vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={generatedImage}
+                alt="Zoomed design"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+              <button
+                onClick={() => setShowZoomModal(false)}
+                className="absolute top-4 right-4 p-3 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 px-3 py-2 bg-black/60 backdrop-blur-sm rounded-full">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-white/80">
+                    {designType === 'interior' ? 'Interior' : 'Exterior'} Design
+                  </span>
+                </div>
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-full font-medium text-sm hover:bg-white/90 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

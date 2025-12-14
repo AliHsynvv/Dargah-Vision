@@ -36,21 +36,21 @@ export default function Header() {
               className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             >
               <Grid3x3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Tətbiqlər</span>
+              <span>Apps</span>
             </Link>
             <Link
-              href="/#pricing"
+              href="/pricing"
               className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             >
               <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Qiymətlər</span>
+              <span>Pricing</span>
             </Link>
             <Link
               href="/create"
               className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-white text-black text-xs sm:text-sm font-medium hover:bg-white/90 transition-all duration-300 shadow-md shadow-white/20"
             >
               <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Yarat</span>
+              <span>Create</span>
             </Link>
           </div>
         </div>
